@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Seed Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1ECDE; --card:#FAF7EE; --ink:#2B2A25; --ink-soft:#6b6555;
+    --moss:#35502F; --moss-dark:#22331D; --soil:#7A5230; --gold:#B98A1F;
+    --rust:#9C4A32; --line:#D9D0B8; --line-soft:#e7e0ca;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:'Public Sans',sans-serif; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.serif{font-family:'Fraunces',serif;}
+  a{color:inherit;}
+  ::selection{background:var(--gold);color:var(--card);}
+
+  .masthead{background:var(--moss);color:var(--paper);padding:28px 32px 0;
+    background-image:radial-gradient(circle at 90% -20%, rgba(255,255,255,.06), transparent 55%);}
+  .masthead-top{display:flex;justify-content:space-between;align-items:flex-end;
+    max-width:1080px;margin:0 auto;flex-wrap:wrap;gap:16px;}
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand svg{flex:none;}
+  .brand h1{font-size:28px;font-weight:600;margin:0;letter-spacing:.2px;}
+  .brand p{margin:2px 0 0;font-size:13px;color:#cfd8c4;font-family:'Public Sans';}
+  .api-config{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#cfd8c4;
+    padding-bottom:10px;}
+  .api-config input{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);
+    color:var(--paper);border-radius:6px;padding:6px 9px;font-size:12.5px;width:190px;
+    font-family:'Public Sans';}
+  .api-config button{background:none;border:1px solid rgba(255,255,255,.3);color:var(--paper);
+    border-radius:6px;padding:6px 10px;font-size:12.5px;cursor:pointer;}
+  .api-config button:hover{background:rgba(255,255,255,.12);}
+
+  nav.tabs{max-width:1080px;margin:22px auto 0;display:flex;gap:4px;padding:0 0;}
+  .tab-btn{font-family:'Fraunces',serif;font-size:15px;color:#d9dfcf;background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.18);border-bottom:none;padding:10px 20px 12px;
+    border-radius:8px 8px 0 0;cursor:pointer;position:relative;top:1px;}
+  .tab-btn.active{background:var(--paper);color:var(--moss-dark);border-color:var(--paper);
+    font-weight:600;}
+
+  main{max-width:1080px;margin:0 auto;padding:28px 32px 80px;}
+  .view{display:none;} .view.active{display:block;}
+
+  #error-banner{display:none;max-width:1080px;margin:14px auto 0;padding:12px 16px;
+    background:#fbeee7;border:1px solid var(--rust);color:var(--rust);border-radius:8px;
+    font-size:14px;}
+
+  /* Dashboard */
+  .hero{display:flex;gap:36px;align-items:center;padding:26px 0 10px;border-bottom:1px solid var(--line);
+    margin-bottom:26px;flex-wrap:wrap;}
+  .hero-figure{flex:none;}
+  .hero-num{font-size:64px;font-weight:600;line-height:1;color:var(--moss-dark);}
+  .hero-label{font-size:14px;color:var(--ink-soft);margin-top:4px;}
+  .stat-row{display:flex;gap:34px;flex-wrap:wrap;}
+  .stat{min-width:110px;}
+  .stat .n{font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:var(--soil);}
+  .stat .l{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+
+  .section-head{display:flex;justify-content:space-between;align-items:baseline;margin:34px 0 10px;}
+  .section-head h2{font-size:20px;font-weight:600;margin:0;}
+  .section-head .hint{font-size:12.5px;color:var(--ink-soft);}
+
+  /* Ledger rows */
+  .ledger{border-top:1px solid var(--line);}
+  .row{display:flex;gap:16px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--line-soft);
+    cursor:pointer;}
+  .row:hover{background:rgba(122,82,48,.05);}
+  .row .idx{font-family:'Fraunces',serif;font-size:13px;color:var(--ink-soft);width:26px;flex:none;}
+  .row .main{flex:1;min-width:0;}
+  .row .title{font-weight:600;font-size:15px;}
+  .row .sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .row .meta{flex:none;text-align:right;font-size:12.5px;color:var(--ink-soft);}
+  .badge{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:20px;
+    border:1px solid var(--line);margin-left:6px;}
+  .badge.gold{border-color:var(--gold);color:#8a6a17;background:rgba(185,138,31,.09);}
+  .badge.rust{border-color:var(--rust);color:var(--rust);background:rgba(156,74,50,.08);}
+  .badge.moss{border-color:var(--moss);color:var(--moss-dark);background:rgba(53,80,47,.07);}
+
+  .detail{padding:6px 4px 20px 30px;border-bottom:1px solid var(--line-soft);display:none;}
+  .detail.open{display:block;}
+  .detail h4{font-size:13px;margin:12px 0 6px;color:var(--ink-soft);font-weight:600;
+    font-family:'Public Sans';text-transform:none;}
+  .report{font-size:13.5px;padding:8px 0;border-bottom:1px dashed var(--line);}
+  .lineage-chain{font-size:13.5px;color:var(--ink-soft);}
+  .lineage-chain span{color:var(--soil);font-weight:600;}
+
+  /* Panels / forms */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;
+    margin-top:14px;}
+  .toggle-add{font-family:'Public Sans';font-size:13px;font-weight:600;color:var(--moss-dark);
+    background:none;border:1px solid var(--moss);border-radius:6px;padding:7px 14px;cursor:pointer;}
+  .toggle-add:hover{background:rgba(53,80,47,.08);}
+  form.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px;}
+  form.grid label{font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;}
+  form.grid input, form.grid select, form.grid textarea{
+    width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;
+    background:#fff;font-family:'Public Sans';font-size:13.5px;color:var(--ink);}
+  form.grid textarea{resize:vertical;min-height:38px;}
+  .form-actions{grid-column:1/-1;display:flex;gap:10px;align-items:center;margin-top:4px;}
+  .btn-primary{background:var(--moss);color:#fff;border:none;border-radius:6px;padding:9px 18px;
+    font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Public Sans';}
+  .btn-primary:hover{background:var(--moss-dark);}
+  .form-note{font-size:12px;color:var(--ink-soft);}
+
+  .filter-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .filter-row input{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;
+    font-family:'Public Sans';background:#fff;}
+
+  /* Network */
+  .network-wrap{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;}
+  svg#graph{background:var(--card);border:1px solid var(--line);border-radius:10px;flex:none;}
+  .legend{font-size:12.5px;color:var(--ink-soft);max-width:220px;line-height:1.6;}
+  .legend b{color:var(--ink);}
+
+  .empty{padding:26px 4px;color:var(--ink-soft);font-size:14px;font-style:italic;}
+  footer{text-align:center;font-size:12px;color:var(--ink-soft);padding:20px 0 40px;}
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-top">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+        <path d="M17 30C17 30 6 24 6 14C6 8 11 4 17 4C23 4 28 8 28 14C28 24 17 30 17 30Z" stroke="#F1ECDE" stroke-width="1.6"/>
+        <path d="M17 30V11" stroke="#F1ECDE" stroke-width="1.6"/>
+        <path d="M17 15C17 15 13 15 12 11C16 10 17 15 17 15Z" fill="#F1ECDE"/>
+        <path d="M17 19C17 19 22 18 23 14C18 13 17 19 17 19Z" fill="#F1ECDE"/>
+      </svg>
+      <div>
+        <h1>The Seed Ledger</h1>
+        <p>A record book for the informal seed-saving network</p>
+      </div>
+    </div>
+    <div class="api-config" id="statusBadge">
+      <span id="connStatus">● connecting…</span>
+    </div>
+  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="growers">Growers</button>
+    <button class="tab-btn" data-tab="lots">Seed Lots</button>
+    <button class="tab-btn" data-tab="network">Exchanges &amp; Network</button>
+  </nav>
+</div>
+
+<div id="error-banner"></div>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <section class="view active" id="view-dashboard">
+    <div class="hero">
+      <div class="hero-figure">
+        <div class="hero-num" id="statLots">—</div>
+        <div class="hero-label">seed lots preserved in the network</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="statGrowers">—</div><div class="l">growers</div></div>
+        <div class="stat"><div class="n" id="statExchanges">—</div><div class="l">exchanges recorded</div></div>
+        <div class="stat"><div class="n" id="statReports">—</div><div class="l">quality reports</div></div>
+        <div class="stat"><div class="n" id="statGerm">—</div><div class="l">avg. germination rate</div></div>
+      </div>
+    </div>
+    <p class="form-note">This ledger tracks who is saving what seed, how it performs when others grow it out, and how it moves hand to hand through the network. Use the tabs above to add growers, log a new seed lot, submit a quality report, or record an exchange.</p>
+  </section>
+
+  <!-- GROWERS -->
+  <section class="view" id="view-growers">
+    <div class="section-head">
+      <h2>Growers</h2>
+      <button class="toggle-add" onclick="toggle('growerPanel')">+ Add grower</button>
+    </div>
+    <div class="panel" id="growerPanel" style="display:none;">
+      <strong class="serif" style="font-size:15px;">New grower record</strong>
+      <form class="grid" onsubmit="return submitGrower(event)">
+        <div><label>Name</label><input name="name" required></div>
+        <div><label>Email</label><input name="email" type="email"></div>
+        <div><label>Location</label><input name="location" placeholder="Village, district"></div>
+        <div style="grid-column:1/-1;"><label>Bio / notes</label><textarea name="bio"></textarea></div>
+        <div class="form-actions"><button class="btn-primary" type="submit">Save grower</button></div>
+      </form>
+    </div>
+    <div class="ledger" id="growersLedger"></div>
+  </section>
+
+  <!-- SEED LOTS -->
+  <section class="view" id="view-lots">
+    <div class="section-head">
+      <h2>Seed Lots</h2>
+      <button class="toggle-add" onclick="toggle('lotPanel')">+ Log seed lot</button>
+    </div>
+    <div class="panel" id="lotPanel" style="display:none;">
+      <strong class="serif" style="font-size:15px;">New seed lot</strong>
+      <form class="grid" onsubmit="return submitLot(event)">
+        <div><label>Owner (saver)</label><select name="owner_id" required id="lotOwnerSelect"></select></div>
+        <div><label>Variety</label><input name="variety" required placeholder="e.g. Arka Vikas Tomato"></div>
+        <div><label>Species</label><input name="species" placeholder="e.g. Solanum lycopersicum"></div>
+        <div><label>Source</label><input name="source" placeholder="own harvest / traded / purchased"></div>
+        <div><label>Generation</label><input name="generation" type="number" value="1" min="1"></div>
+        <div><label>Parent lot (optional)</label><select name="parent_lot_id" id="lotParentSelect"><option value="">— none —</option></select></div>
+        <div style="grid-column:1/-1;"><label>Notes</label><textarea name="description"></textarea></div>
+        <div class="form-actions"><button class="btn-primary" type="submit">Save seed lot</button></div>
+      </form>
+    </div>
+    <div class="filter-row">
+      <input id="filterVariety" placeholder="Filter by variety…" oninput="loadLots()">
+      <input id="filterSpecies" placeholder="Filter by species…" oninput="loadLots()">
+    </div>
+    <div class="ledger" id="lotsLedger"></div>
+  </section>
+
+  <!-- NETWORK -->
+  <section class="view" id="view-network">
+    <div class="section-head">
+      <h2>Network graph</h2>
+      <button class="toggle-add" onclick="toggle('exchangePanel')">+ Record exchange</button>
+    </div>
+    <div class="panel" id="exchangePanel" style="display:none;">
+      <strong class="serif" style="font-size:15px;">New exchange</strong>
+      <form class="grid" onsubmit="return submitExchange(event)">
+        <div><label>Seed lot</label><select name="seed_lot_id" required id="exLotSelect"></select></div>
+        <div><label>From grower</label><select name="from_grower_id" required id="exFromSelect"></select></div>
+        <div><label>To grower</label><select name="to_grower_id" required id="exToSelect"></select></div>
+        <div><label>Quantity</label><input name="quantity" placeholder="e.g. 20 seeds"></div>
+        <div style="grid-column:1/-1;"><label>Notes</label><textarea name="notes"></textarea></div>
+        <div class="form-actions"><button class="btn-primary" type="submit">Save exchange</button></div>
+      </form>
+    </div>
+    <div class="network-wrap">
+      <svg id="graph" width="520" height="420"></svg>
+      <div class="legend">
+        <p><b>Reading the graph</b><br>Each circle is a grower, sized by how many seed lots they've saved. Lines are exchanges — thicker means more trades between that pair.</p>
+        <p id="graphEmptyNote"></p>
+      </div>
+    </div>
+    <div class="section-head"><h2>Exchange log</h2></div>
+    <div class="ledger" id="exchangeLedger"></div>
+  </section>
+
+</main>
+
+<footer>Seed Saving Quality Network Tracker — hackathon build</footer>
+
+<script>
+let GROWERS = [], LOTS = [];
+
+function setStatus(ok){
+  const el = document.getElementById('connStatus');
+  el.textContent = ok ? '● live' : '● offline';
+  el.style.color = ok ? '#cfe8bd' : '#f0b9a8';
+}
+
+function showError(msg){
+  setStatus(false);
+  const el = document.getElementById('error-banner');
+  el.textContent = "Something went wrong talking to the server — " + msg;
+  el.style.display = 'block';
+}
+function clearError(){ setStatus(true); document.getElementById('error-banner').style.display='none'; }
+
+async function api(path, opts){
+  try{
+    const res = await fetch(path, {
+      headers:{'Content-Type':'application/json'}, ...opts
+    });
+    if(!res.ok){ const t = await res.text(); throw new Error(res.status+' '+t.slice(0,120)); }
+    clearError();
+    return await res.json();
+  }catch(e){ showError(e.message); throw e; }
+}
+
+function toggle(id){
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ---- tabs ----
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='dashboard') loadDashboard();
+    if(btn.dataset.tab==='growers') loadGrowers();
+    if(btn.dataset.tab==='lots') loadLots();
+    if(btn.dataset.tab==='network') loadNetwork();
+  });
+});
+
+// ---- dashboard ----
+async function loadDashboard(){
+  try{
+    const s = await api('/network/stats');
+    document.getElementById('statLots').textContent = s.seed_lot_count;
+    document.getElementById('statGrowers').textContent = s.grower_count;
+    document.getElementById('statExchanges').textContent = s.exchange_count;
+    document.getElementById('statReports').textContent = s.quality_report_count;
+    document.getElementById('statGerm').textContent = s.avg_germination_rate!=null ? s.avg_germination_rate+'%' : '—';
+  }catch(e){}
+}
+
+// ---- growers ----
+async function loadGrowers(){
+  try{
+    GROWERS = await api('/growers');
+    const ledger = document.getElementById('growersLedger');
+    if(!GROWERS.length){ ledger.innerHTML = '<div class="empty">No growers yet — add the first record above.</div>'; }
+    else{
+      ledger.innerHTML = GROWERS.map((g,i)=>`
+        <div class="row" onclick="toggleGrowerDetail(${g.id})">
+          <div class="idx">${String(i+1).padStart(2,'0')}</div>
+          <div class="main">
+            <div class="title">${esc(g.name)}</div>
+            <div class="sub">${esc(g.location||'location unknown')}${g.email? ' · '+esc(g.email):''}</div>
+          </div>
+          <div class="meta">joined ${new Date(g.joined_at).toLocaleDateString()}</div>
+        </div>
+        <div class="detail" id="growerDetail-${g.id}"></div>
+      `).join('');
+    }
+    fillSelect('lotOwnerSelect', GROWERS, 'Choose grower…');
+    fillSelect('exFromSelect', GROWERS, 'From…');
+    fillSelect('exToSelect', GROWERS, 'To…');
+  }catch(e){}
+}
+
+async function toggleGrowerDetail(id){
+  const el = document.getElementById('growerDetail-'+id);
+  const open = el.classList.contains('open');
+  document.querySelectorAll('.detail.open').forEach(d=>d.classList.remove('open'));
+  if(open) return;
+  el.innerHTML = 'Loading…';
+  el.classList.add('open');
+  try{
+    const g = await api('/growers/'+id);
+    el.innerHTML = `
+      <h4>Reputation</h4>
+      <p>${g.reputation_score!=null ? g.reputation_score+" / 100, based on quality reports from other growers who've grown out their seed." : "No quality reports yet on this grower's lots."}</p>
+      <h4>Seed lots saved</h4>
+      <p>${g.seed_lot_count} lot(s) currently on record.</p>
+      ${g.bio ? `<h4>Notes</h4><p>${esc(g.bio)}</p>` : ''}
+    `;
+  }catch(e){ el.innerHTML = 'Could not load detail.'; }
+}
+
+// ---- seed lots ----
+async function loadLots(){
+  try{
+    const variety = document.getElementById('filterVariety').value;
+    const species = document.getElementById('filterSpecies').value;
+    let q = [];
+    if(variety) q.push('variety='+encodeURIComponent(variety));
+    if(species) q.push('species='+encodeURIComponent(species));
+    LOTS = await api('/seed-lots'+(q.length?'?'+q.join('&'):''));
+    const ledger = document.getElementById('lotsLedger');
+    if(!LOTS.length){ ledger.innerHTML = '<div class="empty">No seed lots on record yet.</div>'; }
+    else{
+      ledger.innerHTML = LOTS.map((l,i)=>`
+        <div class="row" onclick="toggleLotDetail(${l.id})">
+          <div class="idx">${String(i+1).padStart(2,'0')}</div>
+          <div class="main">
+            <div class="title">${esc(l.variety)} <span class="badge moss">gen ${l.generation}</span></div>
+            <div class="sub">${esc(l.species||'species not noted')} · ${esc(l.source||'source not noted')}</div>
+          </div>
+          <div class="meta">lot #${l.id}</div>
+        </div>
+        <div class="detail" id="lotDetail-${l.id}"></div>
+      `).join('');
+    }
+    fillSelect('lotParentSelect', LOTS, '— none —', l=>l.variety+' (lot #'+l.id+')', true);
+    fillSelect('exLotSelect', LOTS, 'Choose seed lot…', l=>l.variety+' (lot #'+l.id+')');
+  }catch(e){}
+}
+
+async function toggleLotDetail(id){
+  const el = document.getElementById('lotDetail-'+id);
+  const open = el.classList.contains('open');
+  document.querySelectorAll('.detail.open').forEach(d=>d.classList.remove('open'));
+  if(open) return;
+  el.innerHTML = 'Loading…';
+  el.classList.add('open');
+  try{
+    const [lot, reports, lineage] = await Promise.all([
+      api('/seed-lots/'+id), api('/seed-lots/'+id+'/quality-reports'), api('/seed-lots/'+id+'/lineage')
+    ]);
+    const chain = lineage.slice().reverse().map(l=>`<span>${esc(l.variety)} (gen ${l.generation})</span>`).join(' → ');
+    el.innerHTML = `
+      <h4>Saved by</h4><p>${esc(lot.owner.name)}${lot.owner.location? ' · '+esc(lot.owner.location):''}</p>
+      <h4>Quality summary</h4>
+      <p>
+        ${lot.avg_germination_rate!=null ? lot.avg_germination_rate+'% germination' : 'no germination data'}
+        · ${lot.avg_purity_rating!=null ? lot.avg_purity_rating+'/5 purity' : 'no purity data'}
+        · ${lot.avg_trueness_to_type!=null ? lot.avg_trueness_to_type+'/5 true-to-type' : 'no trueness data'}
+        (${lot.report_count} report${lot.report_count==1?'':'s'}, ${lot.exchange_count} exchange${lot.exchange_count==1?'':'s'})
+      </p>
+      <h4>Lineage</h4><p class="lineage-chain">${chain||'no recorded parent lot'}</p>
+      <h4>Reports</h4>
+      ${reports.length? reports.map(r=>`<div class="report">${r.germination_rate!=null? r.germination_rate+'% germ · ':''}${r.purity_rating!=null? r.purity_rating+'/5 purity · ':''}${r.trueness_to_type!=null? r.trueness_to_type+'/5 trueness':''}${r.notes? ' — '+esc(r.notes):''}</div>`).join('') : '<p class="form-note">No reports yet.</p>'}
+      <h4>Add a quality report</h4>
+      <form class="grid" onsubmit="return submitReport(event, ${id})">
+        <div><label>Reporter</label><select name="reporter_id" required>${GROWERS.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select></div>
+        <div><label>Germination %</label><input name="germination_rate" type="number" min="0" max="100"></div>
+        <div><label>Purity (1–5)</label><input name="purity_rating" type="number" min="1" max="5"></div>
+        <div><label>True-to-type (1–5)</label><input name="trueness_to_type" type="number" min="1" max="5"></div>
+        <div style="grid-column:1/-1;"><label>Notes</label><textarea name="notes"></textarea></div>
+        <div class="form-actions"><button class="btn-primary" type="submit">Save report</button></div>
+      </form>
+    `;
+  }catch(e){ el.innerHTML = 'Could not load detail.'; }
+}
+
+// ---- network / exchanges ----
+async function loadNetwork(){
+  try{
+    const [graph, exchanges] = await Promise.all([api('/network/graph'), api('/exchanges')]);
+    drawGraph(graph);
+    const ledger = document.getElementById('exchangeLedger');
+    if(!exchanges.length){ ledger.innerHTML = '<div class="empty">No exchanges recorded yet.</div>'; }
+    else{
+      const byId = Object.fromEntries(GROWERS.map(g=>[g.id,g.name]));
+      ledger.innerHTML = exchanges.map((ex,i)=>`
+        <div class="row" style="cursor:default;">
+          <div class="idx">${String(i+1).padStart(2,'0')}</div>
+          <div class="main">
+            <div class="title">${esc(byId[ex.from_grower_id]||('grower #'+ex.from_grower_id))} → ${esc(byId[ex.to_grower_id]||('grower #'+ex.to_grower_id))}</div>
+            <div class="sub">lot #${ex.seed_lot_id}${ex.quantity? ' · '+esc(ex.quantity):''}${ex.notes? ' · '+esc(ex.notes):''}</div>
+          </div>
+          <div class="meta">${ex.exchange_date? new Date(ex.exchange_date).toLocaleDateString(): ''}</div>
+        </div>
+      `).join('');
+    }
+  }catch(e){}
+}
+
+function drawGraph(graph){
+  const svg = document.getElementById('graph');
+  const note = document.getElementById('graphEmptyNote');
+  svg.innerHTML = '';
+  if(!graph.nodes.length){ note.textContent = 'Add growers and exchanges to see the network form.'; return; }
+  note.textContent = '';
+  const W=520,H=420,cx=W/2,cy=H/2,R=Math.min(W,H)/2-70;
+  const maxLots = Math.max(1, ...graph.nodes.map(n=>n.seed_lot_count));
+  const pos = {};
+  graph.nodes.forEach((n,i)=>{
+    const ang = (i/graph.nodes.length)*2*Math.PI - Math.PI/2;
+    pos[n.id] = { x: cx+R*Math.cos(ang), y: cy+R*Math.sin(ang) };
+  });
+  const maxEx = Math.max(1, ...graph.edges.map(e=>e.exchange_count));
+  let svgContent = '';
+  graph.edges.forEach(e=>{
+    const a = pos[e.from_grower_id], b = pos[e.to_grower_id];
+    if(!a||!b) return;
+    const w = 1.5 + (e.exchange_count/maxEx)*4.5;
+    svgContent += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#7A5230" stroke-width="${w}" stroke-opacity="0.55"/>`;
+  });
+  graph.nodes.forEach(n=>{
+    const p = pos[n.id];
+    const r = 14 + (n.seed_lot_count/maxLots)*16;
+    svgContent += `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="#35502F" fill-opacity="0.85" stroke="#22331D" stroke-width="1.5"/>`;
+    svgContent += `<text x="${p.x}" y="${p.y+r+16}" text-anchor="middle" font-size="12" font-family="Public Sans, sans-serif" fill="#2B2A25">${esc(n.name.split(' ')[0])}</text>`;
+  });
+  svg.innerHTML = svgContent;
+}
+
+// ---- form submits ----
+async function submitGrower(e){
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const body = Object.fromEntries(f.entries());
+  if(!body.email) delete body.email;
+  await api('/growers', {method:'POST', body: JSON.stringify(body)});
+  e.target.reset(); toggle('growerPanel'); loadGrowers();
+  return false;
+}
+
+async function submitLot(e){
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const body = Object.fromEntries(f.entries());
+  body.owner_id = parseInt(body.owner_id);
+  body.generation = parseInt(body.generation||'1');
+  body.parent_lot_id = body.parent_lot_id ? parseInt(body.parent_lot_id) : null;
+  await api('/seed-lots', {method:'POST', body: JSON.stringify(body)});
+  e.target.reset(); toggle('lotPanel'); loadLots();
+  return false;
+}
+
+async function submitReport(e, lotId){
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const body = Object.fromEntries(f.entries());
+  body.reporter_id = parseInt(body.reporter_id);
+  ['germination_rate','purity_rating','trueness_to_type'].forEach(k=>{
+    body[k] = body[k] ? Number(body[k]) : null;
+  });
+  await api('/seed-lots/'+lotId+'/quality-reports', {method:'POST', body: JSON.stringify(body)});
+  toggleLotDetail(lotId); toggleLotDetail(lotId); // refresh
+  return false;
+}
+
+async function submitExchange(e){
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const body = Object.fromEntries(f.entries());
+  body.seed_lot_id = parseInt(body.seed_lot_id);
+  body.from_grower_id = parseInt(body.from_grower_id);
+  body.to_grower_id = parseInt(body.to_grower_id);
+  await api('/exchanges', {method:'POST', body: JSON.stringify(body)});
+  e.target.reset(); toggle('exchangePanel'); loadNetwork();
+  return false;
+}
+
+// ---- helpers ----
+function fillSelect(id, items, placeholder, labelFn, keepFirst){
+  const sel = document.getElementById(id);
+  const label = labelFn || (it=>it.name);
+  const opts = items.map(it=>`<option value="${it.id}">${esc(label(it))}</option>`).join('');
+  sel.innerHTML = (keepFirst? `<option value="">${placeholder}</option>` : `<option value="" disabled selected>${placeholder}</option>`) + opts;
+}
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function loadAll(){ loadDashboard(); loadGrowers(); loadLots(); loadNetwork(); }
+loadAll();
+</script>
+</body>
+</html>
